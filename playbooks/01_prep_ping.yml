@@ -1,0 +1,36 @@
+---
+- name: Preparación y verificación de Rocky 8
+  hosts: all
+  gather_facts: false
+  become: true
+
+  pre_tasks:
+    - name: Instalar Python si falta (mínimos)
+      raw: test -e /usr/bin/python3 || (dnf -y install python3 || yum -y install python3)
+      changed_when: false
+
+    - name: Recolectar facts
+      setup:
+
+  tasks:
+    - name: Verificar conectividad con ping
+      ping:
+
+    - name: Instalar paquetes básicos
+      package:
+        name:
+          - vim
+          - git
+          - curl
+          - tree
+        state: present
+
+    - name: Actualizar paquetes si usa dnf
+      dnf:
+        name: "*"
+        state: latest
+      when: ansible_pkg_mgr == "dnf"
+
+  tags:
+    - prep
+    - ping

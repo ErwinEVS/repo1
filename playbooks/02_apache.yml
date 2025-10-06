@@ -1,0 +1,61 @@
+---
+- name: Despliegue de Apache en Rocky 8
+  hosts: all
+  become: true
+  vars:
+    web_port: 80
+    web_content: "Hola desde AWX en Rocky 8"
+
+  tasks:
+    - name: Instalar httpd y firewalld
+      package:
+        name:
+          - httpd
+          - firewalld
+        state: present
+
+    - name: Asegurar firewalld encendido
+      service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Abrir servicio HTTP en firewalld
+      firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        immediate: true
+
+    - name: Crear página de inicio
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          <!doctype html>
+          <html>
+          <head><meta charset="utf-8"><title>Demo AWX</title></head>
+          <body style="font-family:sans-serif;">
+            <h1>{{ web_content }}</h1>
+            <p>Host: {{ inventory_hostname }} | Fecha: {{ ansible_date_time.date }} {{ ansible_date_time.time }}</p>
+          </body>
+          </html>
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Habilitar y arrancar httpd
+      service:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: Probar HTTP desde el propio host
+      uri:
+        url: "http://127.0.0.1:{{ web_port }}"
+        return_content: true
+        status_code: 200
+      register: webpage
+
+    - name: Mostrar primeras 200 chars de la respuesta
+      debug:
+        msg: "{{ webpage.content[:200] }}"
